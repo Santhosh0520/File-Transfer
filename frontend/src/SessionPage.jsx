@@ -15,7 +15,7 @@ export default function SessionPage() {
 
     try {
       const { data, error } = await supabase.storage
-        .from("file-transfer")
+        .from("File-Transfer")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: true,
