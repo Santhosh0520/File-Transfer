@@ -3,7 +3,9 @@ import { QRCodeSVG } from "qrcode.react";
 export default function QRPage() {
   // SAFE session id (no crypto API)
   const sessionId = Math.random().toString(36).substring(2, 10);
-  const sessionUrl = "http:// 192.168.43.139:5173/#/session/" + sessionId;
+  const sessionUrl =
+  "https://file-transfer.vercel.app/#/session/" + sessionId;
+
 
 
   return (
