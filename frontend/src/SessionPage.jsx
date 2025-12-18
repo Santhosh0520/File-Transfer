@@ -4,70 +4,38 @@ import { supabase } from "./supabase";
 
 export default function SessionPage() {
   const { id } = useParams();
-  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  console.log("SUPABASE CLIENT:", supabase);
 
   async function uploadFile(file) {
     if (!file) return;
 
-    setUploading(true);
+    setMsg("Uploading...");
 
-    // unique file path (important)
-    const filePath = `sessions/${id}/${Date.now()}_${file.name}`;
+    console.log("Bucket test starting...");
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabase
+      .storage
       .from("File-Transfer")
-      .upload(filePath, file, {
-        upsert: true,
-      });
+      .upload(`test-${Date.now()}.txt`, file);
+
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
 
     if (error) {
-      console.error("Upload error:", error);
-      alert("Upload failed ❌");
-      setUploading(false);
+      setMsg("❌ " + error.message);
       return;
     }
 
-    console.log("Upload success:", data);
-    alert("File uploaded successfully ✅");
-    setUploading(false);
+    setMsg("✅ Upload success");
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#020617",
-        color: "white",
-      }}
-    >
-      <div
-        style={{
-          background: "#0f172a",
-          padding: "30px",
-          borderRadius: "16px",
-          width: "100%",
-          maxWidth: "400px",
-          textAlign: "center",
-        }}
-      >
-        <h2>Connected to Session</h2>
-        <p style={{ fontSize: "14px", opacity: 0.8 }}>{id}</p>
-
-        <input
-          type="file"
-          onChange={(e) => uploadFile(e.target.files[0])}
-          style={{ marginTop: "20px" }}
-        />
-
-        {uploading && (
-          <p style={{ marginTop: "15px", color: "#38bdf8" }}>
-            Uploading...
-          </p>
-        )}
-      </div>
+    <div style={{ padding: 40 }}>
+      <h2>Session {id}</h2>
+      <input type="file" onChange={e => uploadFile(e.target.files[0])} />
+      <p>{msg}</p>
     </div>
   );
 }
