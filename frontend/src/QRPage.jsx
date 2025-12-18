@@ -4,7 +4,7 @@ export default function QRPage() {
   // SAFE session id (no crypto API)
   const sessionId = Math.random().toString(36).substring(2, 10);
   const sessionUrl =
-  "https://file-transfer.vercel.app/#/session/" + sessionId;
+  "https://file-transfer.vercel.app/session/" + sessionId;
 
 
 
