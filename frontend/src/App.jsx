@@ -1,14 +1,14 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import QRPage from "./QRPage";
 import SessionPage from "./SessionPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<QRPage />} />
         <Route path="/session/:id" element={<SessionPage />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
