@@ -1,6 +1,5 @@
 import { useParams } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "./supabase";
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -9,23 +8,36 @@ export default function SessionPage() {
   async function uploadFile(file) {
     if (!file) return;
 
+    alert("Upload started");
     setMessage("Uploading...");
 
     const filePath = `sessions/${id}/${Date.now()}_${file.name}`;
 
-    const { error } = await supabase.storage
-      .from("File-Transfer")
-      .upload(filePath, file, {
-        upsert: true,
-      });
+    try {
+      const response = await fetch(
+        "https://yfztfyhemmrxyvhjcoat.supabase.co/storage/v1/object/File-Transfer/" + filePath,
+        {
+          method: "POST",
+          headers: {
+            Authorization: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmenRmeWhlbW1yeHl2aGpjb2F0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjQ4MjcsImV4cCI6MjA4MTU0MDgyN30.CCx5iztz9rmJEtFVP25aLgjGZEUCLeZVglrVx_6ppEE",
+          },
+          body: file,
+        }
+      );
 
-    if (error) {
-      console.error(error);
-      setMessage("❌ Upload failed");
-      return;
+      alert("Response status: " + response.status);
+
+      if (!response.ok) {
+        setMessage("❌ Upload blocked");
+        return;
+      }
+
+      setMessage("✅ Upload success");
+    } catch (err) {
+      console.error(err);
+      alert("Network error");
+      setMessage("❌ Network error");
     }
-
-    setMessage("✅ Upload completed");
   }
 
   return (
