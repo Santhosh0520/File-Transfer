@@ -1,56 +1,73 @@
-import { useParams } from "react-router-dom";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "./supabase";
 
 export default function SessionPage() {
   const { id } = useParams();
-  const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   async function uploadFile(file) {
     if (!file) return;
 
-    alert("Upload started");
-    setMessage("Uploading...");
+    setUploading(true);
 
+    // unique file path (important)
     const filePath = `sessions/${id}/${Date.now()}_${file.name}`;
 
-    try {
-      const response = await fetch(
-        "https://yfztfyhemmrxyvhjcoat.supabase.co/storage/v1/object/File-Transfer/" + filePath,
-        {
-          method: "POST",
-          headers: {
-            Authorization: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmenRmeWhlbW1yeHl2aGpjb2F0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjQ4MjcsImV4cCI6MjA4MTU0MDgyN30.CCx5iztz9rmJEtFVP25aLgjGZEUCLeZVglrVx_6ppEE",
-          },
-          body: file,
-        }
-      );
+    const { data, error } = await supabase.storage
+      .from("File-Transfer")
+      .upload(filePath, file, {
+        upsert: true,
+      });
 
-      alert("Response status: " + response.status);
-
-      if (!response.ok) {
-        setMessage("❌ Upload blocked");
-        return;
-      }
-
-      setMessage("✅ Upload success");
-    } catch (err) {
-      console.error(err);
-      alert("Network error");
-      setMessage("❌ Network error");
+    if (error) {
+      console.error("Upload error:", error);
+      alert("Upload failed ❌");
+      setUploading(false);
+      return;
     }
+
+    console.log("Upload success:", data);
+    alert("File uploaded successfully ✅");
+    setUploading(false);
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Connected to Session</h2>
-      <p>{id}</p>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#020617",
+        color: "white",
+      }}
+    >
+      <div
+        style={{
+          background: "#0f172a",
+          padding: "30px",
+          borderRadius: "16px",
+          width: "100%",
+          maxWidth: "400px",
+          textAlign: "center",
+        }}
+      >
+        <h2>Connected to Session</h2>
+        <p style={{ fontSize: "14px", opacity: 0.8 }}>{id}</p>
 
-      <input
-        type="file"
-        onChange={(e) => uploadFile(e.target.files[0])}
-      />
+        <input
+          type="file"
+          onChange={(e) => uploadFile(e.target.files[0])}
+          style={{ marginTop: "20px" }}
+        />
 
-      <p>{message}</p>
+        {uploading && (
+          <p style={{ marginTop: "15px", color: "#38bdf8" }}>
+            Uploading...
+          </p>
+        )}
+      </div>
     </div>
   );
 }
