@@ -8,27 +8,31 @@ export default function SessionPage() {
   async function uploadFile(file) {
     if (!file) return;
 
-    setMsg("Uploading...");
+    setMsg("Starting Supabase upload...");
     setIsUploading(true);
 
     try {
-      // Create a unique filename so it doesn't conflict
-      const fileName = `${Date.now()}-${file.name}`;
+      // 1. Create a truly unique name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
 
+      // 2. Upload to Supabase Storage
       const { data, error } = await supabase.storage
-        .from("File-Transfer")
-        .upload(fileName, file);
+        .from("File-Transfer") 
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log("UPLOAD SUCCESS:", data);
-      setMsg("✅ Upload successful!");
-    } catch (e) {
-      console.error("UPLOAD ERROR:", e);
-      // This handles the CORS or Network error
-      setMsg("❌ Error: " + (e.message || "Check CORS settings in Supabase"));
+      console.log("SUCCESS:", data);
+      setMsg("✅ File uploaded successfully to Supabase!");
+      
+    } catch (err) {
+      console.error("UPLOAD FAILED:", err);
+      // Detailed error message to help you debug CORS vs Permissions
+      setMsg(`❌ Error: ${err.message || "Connection failed. Check Supabase CORS settings."}`);
     } finally {
       setIsUploading(false);
     }
@@ -36,14 +40,24 @@ export default function SessionPage() {
 
   return (
     <div style={{ padding: 40, color: "white", background: "#020617", minHeight: "100vh" }}>
-      <h2>Upload File</h2>
-      <input 
-        type="file" 
-        onChange={e => uploadFile(e.target.files[0])} 
-        disabled={isUploading}
-      />
-      <p style={{ marginTop: "20px", fontWeight: "bold" }}>{msg}</p>
-      {isUploading && <div className="spinner">Please wait...</div>}
+      <h2 style={{ borderBottom: "1px solid #334155", paddingBottom: "10px" }}>Secure File Upload</h2>
+      <div style={{ marginTop: "20px" }}>
+        <input 
+          type="file" 
+          onChange={e => uploadFile(e.target.files[0])} 
+          disabled={isUploading}
+          style={{ padding: "10px", background: "#1e293b", borderRadius: "5px", color: "white" }}
+        />
+      </div>
+      <div style={{ 
+        marginTop: "30px", 
+        padding: "15px", 
+        borderRadius: "8px", 
+        backgroundColor: isUploading ? "#1e293b" : "#0f172a",
+        border: "1px solid #334155"
+      }}>
+        <strong>Status:</strong> {msg}
+      </div>
     </div>
   );
 }
