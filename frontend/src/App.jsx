@@ -3,6 +3,8 @@ import QRPage from "./QRPage";
 import SessionPage from "./SessionPage";
 
 export default function App() {
+  console.log("NEW FRONTEND BUILD ACTIVE");
+
   return (
     <HashRouter>
       <Routes>
