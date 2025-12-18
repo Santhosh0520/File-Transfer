@@ -3,40 +3,47 @@ import { supabase } from "./supabase";
 
 export default function SessionPage() {
   const [msg, setMsg] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   async function uploadFile(file) {
     if (!file) return;
 
     setMsg("Uploading...");
-
-    console.log("SUPABASE URL:", import.meta.env.VITE_SUPABASE_URL);
-    console.log("SUPABASE KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
+    setIsUploading(true);
 
     try {
+      // Create a unique filename so it doesn't conflict
+      const fileName = `${Date.now()}-${file.name}`;
+
       const { data, error } = await supabase.storage
         .from("File-Transfer")
-        .upload("debug-test.txt", file);
-
-      console.log("UPLOAD DATA:", data);
-      console.log("UPLOAD ERROR:", error);
+        .upload(fileName, file);
 
       if (error) {
-        setMsg("❌ " + error.message);
-        return;
+        throw error;
       }
 
-      setMsg("✅ Upload success");
+      console.log("UPLOAD SUCCESS:", data);
+      setMsg("✅ Upload successful!");
     } catch (e) {
-      console.error("CATCH ERROR:", e);
-      setMsg("❌ " + e.message);
+      console.error("UPLOAD ERROR:", e);
+      // This handles the CORS or Network error
+      setMsg("❌ Error: " + (e.message || "Check CORS settings in Supabase"));
+    } finally {
+      setIsUploading(false);
     }
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Upload Test</h2>
-      <input type="file" onChange={e => uploadFile(e.target.files[0])} />
-      <p>{msg}</p>
+    <div style={{ padding: 40, color: "white", background: "#020617", minHeight: "100vh" }}>
+      <h2>Upload File</h2>
+      <input 
+        type="file" 
+        onChange={e => uploadFile(e.target.files[0])} 
+        disabled={isUploading}
+      />
+      <p style={{ marginTop: "20px", fontWeight: "bold" }}>{msg}</p>
+      {isUploading && <div className="spinner">Please wait...</div>}
     </div>
   );
 }
