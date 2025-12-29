@@ -8,9 +8,12 @@ const socket = io("https://file-transfer-backend-us1y.onrender.com");
 export default function Session() {
   const { id: sessionId } = useParams();
 
-  const [status, setStatus] = useState("Connected to session");
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const [status, setStatus] = useState(
+    isMobile ? "Waiting for file…" : "Select a file to send"
+  );
   const [progress, setProgress] = useState(0);
-  const [isReceiver, setIsReceiver] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState(null);
 
   useEffect(() => {
@@ -27,7 +30,6 @@ export default function Session() {
       receivedChunks = [];
       receivedSize = 0;
 
-      setIsReceiver(true);
       setStatus(`Receiving ${fileName}`);
       setProgress(0);
     });
@@ -35,9 +37,7 @@ export default function Session() {
     socket.on("file-chunk", (chunk) => {
       receivedChunks.push(chunk);
       receivedSize += chunk.byteLength;
-
-      const percent = Math.floor((receivedSize / fileSize) * 100);
-      setProgress(percent);
+      setProgress(Math.floor((receivedSize / fileSize) * 100));
     });
 
     socket.on("file-end", () => {
@@ -64,13 +64,11 @@ export default function Session() {
         <progress value={progress} max="100" />
         <p>{progress}%</p>
 
-        {/* Laptop → Sender */}
-        {!isReceiver && (
-          <FileSender socket={socket} sessionId={sessionId} />
-        )}
+        {/* ✅ ONLY LAPTOP CAN SEND */}
+        {!isMobile && <FileSender socket={socket} sessionId={sessionId} />}
 
-        {/* Phone → Receiver */}
-        {isReceiver && downloadUrl && (
+        {/* ✅ ONLY PHONE CAN DOWNLOAD */}
+        {isMobile && downloadUrl && (
           <a
             href={downloadUrl}
             download
@@ -92,5 +90,3 @@ export default function Session() {
     </div>
   );
 }
-// 
-
