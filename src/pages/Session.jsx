@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import FileSender from "../components/FileSender";
 
-
 const socket = io("https://file-transfer-backend-us1y.onrender.com");
 
 export default function Session() {
@@ -25,12 +24,14 @@ export default function Session() {
       receivedChunks = [];
       receivedSize = 0;
       setStatus(`Receiving ${fileName}`);
+      setProgress(0);
     });
 
     socket.on("file-chunk", (chunk) => {
       receivedChunks.push(chunk);
       receivedSize += chunk.byteLength;
-      setProgress(Math.floor((receivedSize / fileSize) * 100));
+      const percent = Math.floor((receivedSize / fileSize) * 100);
+      setProgress(percent);
     });
 
     socket.on("file-end", () => {
@@ -40,7 +41,9 @@ export default function Session() {
       const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
 
       setStatus("File received ✅");
       setProgress(100);
@@ -52,17 +55,18 @@ export default function Session() {
       socket.off("file-end");
     };
   }, [sessionId]);
-return (
-  <div className="container">
-    <div className="card">
-      <h2>{status}</h2>
 
-      <progress value={progress} max="100" />
-      <p>{progress}%</p>
+  return (
+    <div className="container">
+      <div className="card">
+        <h2>{status}</h2>
 
-      {/* File sender (use on laptop) */}
-      <FileSender socket={socket} sessionId={sessionId} />
+        <progress value={progress} max="100" />
+        <p>{progress}%</p>
+
+        {/* File sender (use on laptop) */}
+        <FileSender socket={socket} sessionId={sessionId} />
+      </div>
     </div>
-  </div>
-);
-// 
+  );
+}
