@@ -10,78 +10,62 @@ export default function Session() {
   const [status, setStatus] = useState("Connecting...");
 
   useEffect(() => {
-    console.log("🚀 Session started, room:", roomId);
+    console.log("🚀 Session started:", roomId);
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     pcRef.current = pc;
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        console.log("🧊 ICE candidate generated");
         socket.emit("ice", { roomId, candidate: e.candidate });
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      console.log("❄ ICE state:", pc.iceConnectionState);
-    };
-
-    pc.onconnectionstatechange = () => {
-      console.log("🔗 Connection state:", pc.connectionState);
-    };
-
     pc.ondatachannel = (e) => {
-      console.log("📡 Data channel received");
-      e.channel.onopen = () => {
-        console.log("✅ Data channel open");
-        setStatus("Connected ✅");
-      };
+      e.channel.onopen = () => setStatus("Connected ✅");
     };
 
-   socket.on("role", async (role) => {
-  console.log("🎭 Role received:", role);
-});
+    // 👇 REGISTER LISTENERS FIRST (IMPORTANT)
 
-socket.emit("join-room", roomId);
-
+    socket.on("role", async (role) => {
+      console.log("🎭 Role:", role);
 
       if (role === "offerer") {
-        console.log("📤 Creating data channel");
         const dc = pc.createDataChannel("data");
-
-        dc.onopen = () => {
-          console.log("✅ Data channel open (offerer)");
-          setStatus("Connected ✅");
-        };
+        dc.onopen = () => setStatus("Connected ✅");
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        console.log("📄 Offer created");
         socket.emit("offer", { roomId, offer });
       }
     });
 
     socket.on("offer", async (offer) => {
-      console.log("📄 Offer received");
       await pc.setRemoteDescription(offer);
-
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      console.log("📄 Answer created");
       socket.emit("answer", { roomId, answer });
     });
 
     socket.on("answer", async (answer) => {
-      console.log("📄 Answer received");
       await pc.setRemoteDescription(answer);
     });
 
     socket.on("ice", async (candidate) => {
-      console.log("🧊 ICE candidate received");
       await pc.addIceCandidate(candidate);
     });
+
+    // 👇 EMIT AFTER LISTENERS
+    socket.emit("join-room", roomId);
+
+    return () => {
+      socket.off("role");
+      socket.off("offer");
+      socket.off("answer");
+      socket.off("ice");
+    };
   }, [roomId]);
 
   return (
