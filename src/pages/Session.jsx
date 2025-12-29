@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
+import FileSender from "../components/FileSender";
+
 
 const socket = io("https://file-transfer-backend-us1y.onrender.com");
 
@@ -50,14 +52,17 @@ export default function Session() {
       socket.off("file-end");
     };
   }, [sessionId]);
+return (
+  <div className="container">
+    <div className="card">
+      <h2>{status}</h2>
 
-  return (
-    <div className="container">
-      <div className="card">
-        <h2>{status}</h2>
-        <progress value={progress} max="100" />
-        <p>{progress}%</p>
-      </div>
+      <progress value={progress} max="100" />
+      <p>{progress}%</p>
+
+      {/* File sender (use on laptop) */}
+      <FileSender socket={socket} sessionId={sessionId} />
     </div>
-  );
-}
+  </div>
+);
+// 
