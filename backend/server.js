@@ -35,6 +35,9 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(5000, () => {
-  console.log("Backend signaling server running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log("Backend signaling server running on port", PORT);
 });
+

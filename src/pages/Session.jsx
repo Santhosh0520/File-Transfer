@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { createPeerConnection } from "../webrtc.js";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://file-transfer-backend-us1y.onrender.com");
+
 
 export default function Session() {
   const { id: roomId } = useParams();
