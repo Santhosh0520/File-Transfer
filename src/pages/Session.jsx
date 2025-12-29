@@ -40,11 +40,12 @@ export default function Session() {
       };
     };
 
-    socket.emit("join-room", roomId);
-    console.log("📨 join-room emitted");
+   socket.on("role", async (role) => {
+  console.log("🎭 Role received:", role);
+});
 
-    socket.on("role", async (role) => {
-      console.log("🎭 Role received:", role);
+socket.emit("join-room", roomId);
+
 
       if (role === "offerer") {
         console.log("📤 Creating data channel");
