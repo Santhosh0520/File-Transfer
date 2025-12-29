@@ -1,6 +1,6 @@
 export default function FileSender({ socket, sessionId }) {
   const sendFile = async (file) => {
-    const chunkSize = 16 * 1024; // 16KB
+    const chunkSize = 16 * 1024;
     let offset = 0;
 
     socket.emit("file-start", {
@@ -12,7 +12,7 @@ export default function FileSender({ socket, sessionId }) {
     while (offset < file.size) {
       const slice = file.slice(offset, offset + chunkSize);
       const buffer = await slice.arrayBuffer();
-      socket.emit("file-chunk", { sessionId, chunk: buffer });
+      socket.emit("file-chunk", sessionId, buffer);
       offset += chunkSize;
     }
 
