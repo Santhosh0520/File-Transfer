@@ -7,8 +7,11 @@ const socket = io("https://file-transfer-backend-us1y.onrender.com");
 
 export default function Session() {
   const { id: sessionId } = useParams();
+
   const [status, setStatus] = useState("Connected to session");
   const [progress, setProgress] = useState(0);
+  const [isReceiver, setIsReceiver] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState(null);
 
   useEffect(() => {
     socket.emit("join-session", sessionId);
@@ -18,11 +21,13 @@ export default function Session() {
     let fileSize = 0;
     let fileName = "";
 
-    socket.on("file-start", (data) => {
-      fileName = data.fileName;
-      fileSize = data.fileSize;
+    socket.on("file-start", ({ fileName: name, fileSize: size }) => {
+      fileName = name;
+      fileSize = size;
       receivedChunks = [];
       receivedSize = 0;
+
+      setIsReceiver(true);
       setStatus(`Receiving ${fileName}`);
       setProgress(0);
     });
@@ -30,6 +35,7 @@ export default function Session() {
     socket.on("file-chunk", (chunk) => {
       receivedChunks.push(chunk);
       receivedSize += chunk.byteLength;
+
       const percent = Math.floor((receivedSize / fileSize) * 100);
       setProgress(percent);
     });
@@ -38,14 +44,8 @@ export default function Session() {
       const blob = new Blob(receivedChunks);
       const url = URL.createObjectURL(blob);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      setStatus("File received ✅");
+      setDownloadUrl(url);
+      setStatus("File ready to download 📥");
       setProgress(100);
     });
 
@@ -64,9 +64,33 @@ export default function Session() {
         <progress value={progress} max="100" />
         <p>{progress}%</p>
 
-        {/* File sender (use on laptop) */}
-        <FileSender socket={socket} sessionId={sessionId} />
+        {/* Laptop → Sender */}
+        {!isReceiver && (
+          <FileSender socket={socket} sessionId={sessionId} />
+        )}
+
+        {/* Phone → Receiver */}
+        {isReceiver && downloadUrl && (
+          <a
+            href={downloadUrl}
+            download
+            style={{
+              display: "inline-block",
+              marginTop: "12px",
+              padding: "10px 16px",
+              background: "#22c55e",
+              color: "#000",
+              borderRadius: "10px",
+              textDecoration: "none",
+              fontWeight: "bold",
+            }}
+          >
+            Tap to Download
+          </a>
+        )}
       </div>
     </div>
   );
 }
+// 
+
