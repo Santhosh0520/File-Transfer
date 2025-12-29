@@ -1,78 +1,62 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 
 const socket = io("https://file-transfer-backend-us1y.onrender.com");
 
 export default function Session() {
-  const { id: roomId } = useParams();
-  const pcRef = useRef(null);
-  const [status, setStatus] = useState("Connecting...");
+  const { id: sessionId } = useParams();
+  const [status, setStatus] = useState("Connected to session");
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    console.log("🚀 Session started:", roomId);
+    socket.emit("join-session", sessionId);
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-    pcRef.current = pc;
+    let receivedChunks = [];
+    let receivedSize = 0;
+    let fileSize = 0;
+    let fileName = "";
 
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        socket.emit("ice", { roomId, candidate: e.candidate });
-      }
-    };
-
-    pc.ondatachannel = (e) => {
-      e.channel.onopen = () => setStatus("Connected ✅");
-    };
-
-    // 👇 REGISTER LISTENERS FIRST (IMPORTANT)
-
-    socket.on("role", async (role) => {
-      console.log("🎭 Role:", role);
-
-      if (role === "offerer") {
-        const dc = pc.createDataChannel("data");
-        dc.onopen = () => setStatus("Connected ✅");
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit("offer", { roomId, offer });
-      }
+    socket.on("file-start", (data) => {
+      fileName = data.fileName;
+      fileSize = data.fileSize;
+      receivedChunks = [];
+      receivedSize = 0;
+      setStatus(`Receiving ${fileName}`);
     });
 
-    socket.on("offer", async (offer) => {
-      await pc.setRemoteDescription(offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit("answer", { roomId, answer });
+    socket.on("file-chunk", (chunk) => {
+      receivedChunks.push(chunk);
+      receivedSize += chunk.byteLength;
+      setProgress(Math.floor((receivedSize / fileSize) * 100));
     });
 
-    socket.on("answer", async (answer) => {
-      await pc.setRemoteDescription(answer);
-    });
+    socket.on("file-end", () => {
+      const blob = new Blob(receivedChunks);
+      const url = URL.createObjectURL(blob);
 
-    socket.on("ice", async (candidate) => {
-      await pc.addIceCandidate(candidate);
-    });
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
 
-    // 👇 EMIT AFTER LISTENERS
-    socket.emit("join-room", roomId);
+      setStatus("File received ✅");
+      setProgress(100);
+    });
 
     return () => {
-      socket.off("role");
-      socket.off("offer");
-      socket.off("answer");
-      socket.off("ice");
+      socket.off("file-start");
+      socket.off("file-chunk");
+      socket.off("file-end");
     };
-  }, [roomId]);
+  }, [sessionId]);
 
   return (
     <div className="container">
       <div className="card">
-        <h2>Connection Status</h2>
-        <p>{status}</p>
+        <h2>{status}</h2>
+        <progress value={progress} max="100" />
+        <p>{progress}%</p>
       </div>
     </div>
   );
