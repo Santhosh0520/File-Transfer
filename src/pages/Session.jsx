@@ -2,54 +2,55 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 
-const socket = io("https://file-transfer-backend-us1y.onrender.com", {
-  transports: ["websocket"],
-});
+const socket = io("https://file-transfer-backend-us1y.onrender.com");
 
 export default function Session() {
   const { id: roomId } = useParams();
-  const [status, setStatus] = useState("Connecting...");
   const pcRef = useRef(null);
+  const [status, setStatus] = useState("Connecting...");
 
   useEffect(() => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+    pcRef.current = pc;
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        socket.emit("ice", { roomId, candidate: e.candidate });
+      }
+    };
+
+    pc.ondatachannel = (e) => {
+      e.channel.onopen = () => setStatus("Connected ✅");
+    };
+
     socket.emit("join-room", roomId);
-    socket.emit("get-turn-credentials");
 
-    socket.on("turn-credentials", async (iceServers) => {
-      const pc = new RTCPeerConnection({ iceServers });
-      pcRef.current = pc;
+    socket.on("role", async (role) => {
+      if (role === "offerer") {
+        const dc = pc.createDataChannel("data");
+        dc.onopen = () => setStatus("Connected ✅");
 
-      pc.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("ice-candidate", { roomId, candidate: e.candidate });
-        }
-      };
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit("offer", { roomId, offer });
+      }
+    });
 
-      pc.ondatachannel = (e) => {
-        e.channel.onopen = () => setStatus("Connected ✅");
-      };
+    socket.on("offer", async (offer) => {
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit("answer", { roomId, answer });
+    });
 
-      const dc = pc.createDataChannel("file");
-      dc.onopen = () => setStatus("Connected ✅");
+    socket.on("answer", async (answer) => {
+      await pc.setRemoteDescription(answer);
+    });
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("offer", { roomId, offer });
-
-      socket.on("offer", async (offer) => {
-        await pc.setRemoteDescription(offer);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit("answer", { roomId, answer });
-      });
-
-      socket.on("answer", async (answer) => {
-        await pc.setRemoteDescription(answer);
-      });
-
-      socket.on("ice-candidate", async (candidate) => {
-        await pc.addIceCandidate(candidate);
-      });
+    socket.on("ice", async (candidate) => {
+      await pc.addIceCandidate(candidate);
     });
   }, [roomId]);
 
