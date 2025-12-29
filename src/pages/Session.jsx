@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
-import { createPeerConnection } from "../webrtc";
+import { useParams } from "react-router-dom";
+import { io } from "socket.io-client";
+import { createPeerConnection } from "../webrtc.js";
+
+const socket = io("http://localhost:5000");
 
 export default function Session() {
-  const [status, setStatus] = useState("Waiting for connection...");
+  const { id: roomId } = useParams();
+  const [status, setStatus] = useState("Connecting...");
   const [channel, setChannel] = useState(null);
 
   useEffect(() => {
-    const pc = createPeerConnection((dc) => {
-      setChannel(dc);
-      setStatus("Connected ✅");
-    });
+    socket.emit("join-room", roomId);
 
-    // Create data channel on one side
+    const pc = createPeerConnection(
+      (dc) => {
+        setChannel(dc);
+        setStatus("Connected ✅");
+      },
+      (candidate) => {
+        socket.emit("ice-candidate", { roomId, candidate });
+      }
+    );
+
     const dc = pc.createDataChannel("file-transfer");
 
     dc.onopen = () => {
@@ -19,22 +30,33 @@ export default function Session() {
       setStatus("Connected ✅");
     };
 
-    dc.onmessage = (e) => {
-      console.log("Received:", e.data);
-    };
-
-    // TEMP: just log offer (signaling comes next)
-    pc.createOffer().then(offer => {
-      pc.setLocalDescription(offer);
-      console.log("OFFER:", JSON.stringify(offer));
+    socket.on("offer", async (offer) => {
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit("answer", { roomId, answer });
     });
 
-  }, []);
+    socket.on("answer", async (answer) => {
+      await pc.setRemoteDescription(answer);
+    });
+
+    socket.on("ice-candidate", async (candidate) => {
+      await pc.addIceCandidate(candidate);
+    });
+
+    pc.createOffer().then((offer) => {
+      pc.setLocalDescription(offer);
+      socket.emit("offer", { roomId, offer });
+    });
+
+    return () => socket.disconnect();
+  }, [roomId]);
 
   return (
     <div className="container">
       <div className="card">
-        <h2>🔗 WebRTC Status</h2>
+        <h2>🔗 Connection Status</h2>
         <p>{status}</p>
       </div>
     </div>
