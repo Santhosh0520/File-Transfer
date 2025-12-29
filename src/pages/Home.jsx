@@ -3,7 +3,7 @@ import QRCard from "../components/QRCard";
 
 export default function Home() {
   const sessionId = Math.random().toString(36).substring(2, 10);
-  const sessionUrl = `${window.location.origin}/session/${sessionId}`;
+  const sessionUrl = `${window.location.origin}/#/session/${sessionId}`;
 
   return (
     <div className="container">
