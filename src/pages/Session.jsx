@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 export default function Session() {
@@ -10,6 +10,9 @@ export default function Session() {
   );
   const [downloadLink, setDownloadLink] = useState(null);
 
+  const backend = "https://file-transfer-backend-us1y.onrender.com";
+
+  // LAPTOP UPLOAD
   const uploadFile = async (file) => {
     if (!file) return;
 
@@ -18,45 +21,44 @@ export default function Session() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(
-      `https://file-transfer-backend-us1y.onrender.com/upload/${sessionId}`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    const data = await res.json();
-
-    setDownloadLink(
-      `https://file-transfer-backend-us1y.onrender.com/download/${data.fileName}`
-    );
+    await fetch(`${backend}/upload/${sessionId}`, {
+      method: "POST",
+      body: formData,
+    });
 
     setStatus("Upload completed ✅");
   };
+
+  // PHONE CHECKS FOR FILE
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const checkFile = async () => {
+      const res = await fetch(`${backend}/session-file/${sessionId}`);
+      const data = await res.json();
+
+      if (data.available) {
+        setDownloadLink(`${backend}/download/${data.fileName}`);
+        setStatus("File ready to download 📥");
+      }
+    };
+
+    const interval = setInterval(checkFile, 2000);
+    return () => clearInterval(interval);
+  }, [isMobile, sessionId]);
 
   return (
     <div className="container">
       <div className="card">
         <h2>{status}</h2>
 
-        {/* Laptop only */}
+        {/* Laptop */}
         {!isMobile && (
-          <input
-            type="file"
-            onChange={(e) => uploadFile(e.target.files[0])}
-          />
+          <input type="file" onChange={(e) => uploadFile(e.target.files[0])} />
         )}
 
-        {/* Phone only */}
-        {isMobile && (
-          <p style={{ marginTop: "10px" }}>
-            Refresh after upload to download
-          </p>
-        )}
-
-        {/* Download button (after refresh) */}
-        {downloadLink && (
+        {/* Phone */}
+        {isMobile && downloadLink && (
           <a
             href={downloadLink}
             download
