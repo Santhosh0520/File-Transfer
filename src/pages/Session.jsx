@@ -3,7 +3,9 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import FileSender from "../components/FileSender";
 
-const socket = io("https://file-transfer-backend-us1y.onrender.com");
+const socket = io("https://file-transfer-backend-us1y.onrender.com", {
+  transports: ["websocket"],
+});
 
 export default function Session() {
   const { id: sessionId } = useParams();
