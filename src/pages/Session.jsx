@@ -3,8 +3,11 @@ import { useParams } from "react-router-dom";
 
 export default function Session() {
   const { id: sessionId } = useParams();
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const [status, setStatus] = useState("Select a file to upload");
+  const [status, setStatus] = useState(
+    isMobile ? "Waiting for file…" : "Select a file to upload"
+  );
   const [downloadLink, setDownloadLink] = useState(null);
 
   const uploadFile = async (file) => {
@@ -15,7 +18,7 @@ export default function Session() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(
+    const res = await fetch(
       `https://file-transfer-backend-us1y.onrender.com/upload/${sessionId}`,
       {
         method: "POST",
@@ -23,11 +26,12 @@ export default function Session() {
       }
     );
 
-    const data = await response.json();
+    const data = await res.json();
 
-    // Create download link
-    const link = `https://file-transfer-backend-us1y.onrender.com/download/${data.fileName}`;
-    setDownloadLink(link);
+    setDownloadLink(
+      `https://file-transfer-backend-us1y.onrender.com/download/${data.fileName}`
+    );
+
     setStatus("Upload completed ✅");
   };
 
@@ -36,13 +40,22 @@ export default function Session() {
       <div className="card">
         <h2>{status}</h2>
 
-        {/* Laptop: Upload */}
-        <input
-          type="file"
-          onChange={(e) => uploadFile(e.target.files[0])}
-        />
+        {/* Laptop only */}
+        {!isMobile && (
+          <input
+            type="file"
+            onChange={(e) => uploadFile(e.target.files[0])}
+          />
+        )}
 
-        {/* Phone: Download */}
+        {/* Phone only */}
+        {isMobile && (
+          <p style={{ marginTop: "10px" }}>
+            Refresh after upload to download
+          </p>
+        )}
+
+        {/* Download button (after refresh) */}
         {downloadLink && (
           <a
             href={downloadLink}
